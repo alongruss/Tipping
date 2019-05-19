@@ -1,8 +1,12 @@
 import 'dart:math';
+import 'dart:async';
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
-import 'settingsPage.dart';
-import 'params.dart';
+import 'package:scoped_model/scoped_model.dart';
+import 'package:tipping/Modal.dart';
+import 'package:tipping/settingsPage.dart';
+import 'package:tipping/SettingsModel.dart';
+import 'package:tipping/params.dart';
 
 class CalculatorPage extends StatefulWidget {
   CalculatorPage({Key key, this.params}) : super(key: key);
@@ -17,6 +21,8 @@ class _CalculatorPageState extends State<CalculatorPage> {
   double input = 0.0;
   double tip = 0.0;
   int rating = 2;
+  Modal modal = new Modal();
+  MyDialog myDialog = new MyDialog();
 
   @override
   Widget build(BuildContext context) {
@@ -76,18 +82,18 @@ class _CalculatorPageState extends State<CalculatorPage> {
         ),
         Flexible(
           flex: 2,
-          child: Recipt(
-              params: widget.params,
-              input: input),
+          child: Recipt(params: widget.params, input: input),
         ),
       ]),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
+          MyDialog();
+          //modal.mainBottomSheet(context);
+          /*Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) =>
-                      SettingsPage(title: 'Settings', params: widget.params)));
+                      SettingsPage(title: 'Settings', params: widget.params)));*/
         },
         tooltip: 'Settings',
         child: Icon(Icons.settings),
@@ -104,21 +110,23 @@ class _CalculatorPageState extends State<CalculatorPage> {
 
 class Recipt extends StatefulWidget {
   Recipt({this.params, this.input});
+
   final Params params;
   final double input;
 
   @override
   _ReciptState createState() => new _ReciptState();
 }
+
 class _ReciptState extends State<Recipt> {
   double rating = 3.5;
   double percent = 0.5;
-  double tip = 0.0;
-
+  int tip = 0;
 
   Widget build(BuildContext context) {
-    percent = lerpDouble(widget.params.min, widget.params.max,rating/widget.params.numOfStars);
-    tip = percent*0.01*widget.input;
+    percent = lerpDouble(widget.params.min, widget.params.max,
+        rating / widget.params.numOfStars);
+    tip = (percent * 0.01 * widget.input).round();
 
     return Card(
       color: Colors.white,
@@ -129,35 +137,51 @@ class _ReciptState extends State<Recipt> {
           child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
-                RatingScale(starCount: widget.params.numOfStars,rating:rating,onRatingChanged: (newRating) => setState(() => this.rating = newRating),),
+                ScopedModelDescendant<SettingsModel>(
+                    builder: (context, child, settings) {
+                  return RatingScale(
+                    starCount: settings.numOfStars,
+                    rating: rating,
+                    onRatingChanged: (newRating) =>
+                        setState(() => this.rating = newRating),
+                  );
+                }),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    Text(widget.params.min.toStringAsFixed(1), style: Theme.of(context).textTheme.body1),
+                    ScopedModelDescendant<SettingsModel>(
+                        builder: (context, child, settings) {
+                      return Text(settings.min.toStringAsFixed(1),
+                          style: Theme.of(context).textTheme.body1);
+                    }),
                     Text('Linear', style: Theme.of(context).textTheme.body1),
-                    Text(widget.params.max.toStringAsFixed(1),
-                        style: Theme.of(context).textTheme.body1),
+                    ScopedModelDescendant<SettingsModel>(
+                        builder: (context, child, settings) {
+                      return Text(settings.max.toStringAsFixed(1),
+                          style: Theme.of(context).textTheme.body1);
+                    }),
                   ],
                 ),
-                Divider(color:Colors.green),
+                Divider(color: Colors.green),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     Text('Percent:', style: Theme.of(context).textTheme.title),
-                    Text(percent.toStringAsFixed(2)+'%', style: Theme.of(context).textTheme.title),
+                    Text(percent.toStringAsFixed(1) + '%',
+                        style: Theme.of(context).textTheme.title),
                   ],
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     Text('Tip:', style: Theme.of(context).textTheme.title),
-                    Text(tip.toStringAsFixed(2),
+                    Text(tip.toString(),
                         style: Theme.of(context).textTheme.title),
                   ],
                 ),
-                Divider(color:Colors.green),
+                Divider(color: Colors.green),
                 Text(
-                  'Sum: '+(widget.input+tip).toStringAsFixed(2),
+                  'Sum: ' + (widget.input + tip).toStringAsFixed(2),
                   style: Theme.of(context).textTheme.headline,
                 ),
               ])),
@@ -174,7 +198,10 @@ class RatingScale extends StatelessWidget {
   double rating;
 
   RatingScale(
-      {this.starCount = 5, this.rating = 4.0, this.onRatingChanged, this.color});
+      {this.starCount = 5,
+      this.rating = 4.0,
+      this.onRatingChanged,
+      this.color});
 
   Widget buildStar(BuildContext context, int index) {
     Icon icon;
@@ -195,8 +222,9 @@ class RatingScale extends StatelessWidget {
       );
     }
     return new InkResponse(
-      onTap:
-          onRatingChanged == null ? null : () => onRatingChanged(index + 1.0),
+      onTap: onRatingChanged == null
+          ? null
+          : () => onRatingChanged((index + 0.5).roundToDouble()),
       child: icon,
     );
   }
@@ -206,10 +234,10 @@ class RatingScale extends StatelessWidget {
       child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
-              Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: new List.generate(
-                      starCount, (index) => buildStar(context, index))),
+            Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: new List.generate(
+                    starCount, (index) => buildStar(context, index))),
           ]),
     );
   }
@@ -223,5 +251,50 @@ class DecimalNumberSubmitValidator {
     } catch (e) {
       return false;
     }
+  }
+}
+
+class MyDialog extends StatelessWidget {
+
+  
+  Widget _askUser(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return SimpleDialog(
+          title: new Text('Do you like Flutter?'),
+          children: <Widget>[
+            Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  ScopedModelDescendant<SettingsModel>(
+                    builder: (context, child, settings) {
+                      return IconButton(
+                        icon: Icon(Icons.arrow_drop_up),
+                        onPressed: () {
+                          settings.addStar();
+                        },
+                      );
+                    },
+                  ),
+                  Text(
+                    'hellop',
+                    textAlign: TextAlign.center,
+                  ),
+                  IconButton(
+                      icon: Icon(Icons.arrow_drop_down),
+                      onPressed: () {
+                        null;
+                      }),
+                ])
+          ],
+        );
+      },
+    );
+  }
+
+  Widget build(BuildContext context) {
+    return _askUser(context);
   }
 }

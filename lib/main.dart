@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'calculatorPage.dart';
-import 'settingsPage.dart';
-import 'params.dart';
+import 'package:scoped_model/scoped_model.dart';
+import 'package:tipping/calculatorPage.dart';
+import 'package:tipping/settingsPage.dart';
+import 'package:tipping/SettingsModel.dart';
+import 'package:tipping/params.dart';
 
 void main() => runApp(MyApp());
 
@@ -40,6 +42,8 @@ class _MyHomePageState extends State<MyHomePage> {
     initialPage: 0,
   );
 
+  final settings = SettingsModel();
+
   final params = Params(min: 10.0, max: 15.0, numOfStars: 7);
 
   @override
@@ -48,8 +52,10 @@ class _MyHomePageState extends State<MyHomePage> {
         body: PageView(
       controller: controller,
       children: [
-        CalculatorPage(params: params),
-        SettingsPage(title: 'Settings', params: params)
+        ScopedModel<SettingsModel>(
+            model: settings, child: CalculatorPage(params: params)),
+        ScopedModel<SettingsModel>(
+            model: settings, child: SettingsPage(title: 'Settings', params: params)),
       ],
     ));
   }
