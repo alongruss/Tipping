@@ -14,7 +14,7 @@ class SettingsModel extends Model {
     notifyListeners();
   }
   void subtractStar(){
-    if (numOfStars>0) _params.numOfStars--;
+    if (numOfStars>3) _params.numOfStars--;
     notifyListeners();
   }
 

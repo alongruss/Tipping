@@ -19,99 +19,105 @@ class CalculatorPage extends StatefulWidget {
 class _CalculatorPageState extends State<CalculatorPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   double input = 0.0;
-  double tip = 0.0;
-  int rating = 2;
   Modal modal = new Modal();
   MyDialog myDialog = new MyDialog();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[200],
-      body: Column(children: <Widget>[
-        Flexible(
-          flex: 2,
-          child: Container(
-            alignment: AlignmentDirectional.bottomCenter,
-            padding: EdgeInsets.all(32.0),
-            height: 210,
-            decoration: new BoxDecoration(
-              image: new DecorationImage(
-                image: new AssetImage('graphics/Screen Group.png'),
-                fit: BoxFit.cover,
+    return ScopedModelDescendant<SettingsModel>(
+        builder: (context, child, modelSettings) {
+      return Scaffold(
+        backgroundColor: Colors.grey[200],
+        body: Column(children: <Widget>[
+          Flexible(
+            flex: 2,
+            child: Container(
+              alignment: AlignmentDirectional.bottomCenter,
+              padding: EdgeInsets.all(32.0),
+              height: 210,
+              decoration: new BoxDecoration(
+                image: new DecorationImage(
+                  image: new AssetImage('graphics/Screen Group.png'),
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
-            child: Form(
-              key: _formKey,
-              autovalidate: true,
-              child: TextFormField(
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.display1,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                validator: (arg) {
-                  if (DecimalNumberSubmitValidator().isValid(arg)) {
-                    return null;
-                  } else {
-                    input = 0.0;
-                    return 'Not a valid number!';
-                  }
-                },
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (String value) {
-                  setState(() {
-                    input = double.parse(value);
-                    tip = input * widget.params.min * 0.01;
-                  });
-                },
-                onSaved: (String value) {
-                  setState(() {
-                    input = double.parse(value);
-                    tip = input * widget.params.min * 0.01;
-                  });
-                },
-                cursorColor: Colors.white,
-                decoration: InputDecoration(
-                  hintText: 'Bill',
-                  enabledBorder: null,
-                  border: UnderlineInputBorder(),
+              child: Form(
+                key: _formKey,
+                autovalidate: true,
+                child: TextFormField(
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.display1,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  validator: (arg) {
+                    if (DecimalNumberSubmitValidator().isValid(arg)) {
+                      return null;
+                    } else {
+                      input = 0.0;
+                      return 'Not a valid number!';
+                    }
+                  },
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (String value) {
+                    setState(() {
+                      input = double.parse(value);
+                    });
+                  },
+                  onSaved: (String value) {
+                    setState(() {
+                      input = double.parse(value);
+                    });
+                  },
+                  cursorColor: Colors.white,
+                  decoration: InputDecoration(
+                    hintText: 'Bill',
+                    enabledBorder: null,
+                    border: UnderlineInputBorder(),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        Flexible(
-          flex: 2,
-          child: Recipt(params: widget.params, input: input),
-        ),
-      ]),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          MyDialog();
-          //modal.mainBottomSheet(context);
-          /*Navigator.push(
+          Flexible(
+            flex: 2,
+            child: Recipt(settingsModel: modelSettings, input: input),
+          ),
+        ]),
+
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            myDialog._askUser(context, modelSettings);
+
+            /*ScopedModelDescendant<SettingsModel>(
+    builder: (context, child, settings)
+    {
+      showMyDialog("a", context,settings);
+    });*/
+            //modal.mainBottomSheet(context);
+            /*Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) =>
                       SettingsPage(title: 'Settings', params: widget.params)));*/
-        },
-        tooltip: 'Settings',
-        child: Icon(Icons.settings),
-        backgroundColor: Colors.lightGreen,
-        foregroundColor: Colors.white,
-        mini: true,
-        heroTag: "heroFloatingActionButton",
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation
-          .endFloat, // This trailing comma makes auto-formatting nicer for build methods.
-    );
+          },
+          tooltip: 'Settings',
+          child: Icon(Icons.settings),
+          backgroundColor: Colors.lightGreen,
+          foregroundColor: Colors.white,
+          mini: true,
+          heroTag: "heroFloatingActionButton",
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation
+            .endFloat, // This trailing comma makes auto-formatting nicer for build methods.
+      );
+    });
   }
 }
 
 class Recipt extends StatefulWidget {
-  Recipt({this.params, this.input});
+  Recipt({this.settingsModel, this.input});
 
-  final Params params;
+  final SettingsModel settingsModel;
   final double input;
 
   @override
@@ -124,9 +130,14 @@ class _ReciptState extends State<Recipt> {
   int tip = 0;
 
   Widget build(BuildContext context) {
-    percent = lerpDouble(widget.params.min, widget.params.max,
+
+        percent = lerpDouble(widget.settingsModel.min, widget.settingsModel.max,
+            rating / widget.settingsModel.numOfStars);
+        tip = (percent * 0.01 * widget.input).round();
+
+    /*percent = lerpDouble(widget.params.min, widget.params.max,
         rating / widget.params.numOfStars);
-    tip = (percent * 0.01 * widget.input).round();
+    tip = (percent * 0.01 * widget.input).round();*/
 
     return Card(
       color: Colors.white,
@@ -140,7 +151,6 @@ class _ReciptState extends State<Recipt> {
                 ScopedModelDescendant<SettingsModel>(
                     builder: (context, child, settings) {
                   return RatingScale(
-                    starCount: settings.numOfStars,
                     rating: rating,
                     onRatingChanged: (newRating) =>
                         setState(() => this.rating = newRating),
@@ -192,16 +202,16 @@ class _ReciptState extends State<Recipt> {
 typedef void RatingChangeCallback(double newRating);
 
 class RatingScale extends StatelessWidget {
-  final int starCount;
   final RatingChangeCallback onRatingChanged;
   final Color color;
   double rating;
 
   RatingScale(
-      {this.starCount = 5,
-      this.rating = 4.0,
+      {
+      this.rating,
       this.onRatingChanged,
-      this.color});
+      this.color
+      });
 
   Widget buildStar(BuildContext context, int index) {
     Icon icon;
@@ -234,10 +244,10 @@ class RatingScale extends StatelessWidget {
       child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
-            Row(
+            ScopedModelDescendant<SettingsModel>(builder:(context,child,model){return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: new List.generate(
-                    starCount, (index) => buildStar(context, index))),
+                    model.numOfStars, (index) => buildStar(context, index)));}),
           ]),
     );
   }
@@ -254,47 +264,98 @@ class DecimalNumberSubmitValidator {
   }
 }
 
-class MyDialog extends StatelessWidget {
-
-  
-  Widget _askUser(BuildContext context) {
+class MyDialog {
+  _askUser(BuildContext context, SettingsModel settingsModel) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return SimpleDialog(
-          title: new Text('Do you like Flutter?'),
+          title: new Text('Settings'),
           children: <Widget>[
-            Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  ScopedModelDescendant<SettingsModel>(
-                    builder: (context, child, settings) {
-                      return IconButton(
-                        icon: Icon(Icons.arrow_drop_up),
-                        onPressed: () {
-                          settings.addStar();
-                        },
-                      );
-                    },
-                  ),
-                  Text(
-                    'hellop',
-                    textAlign: TextAlign.center,
-                  ),
-                  IconButton(
-                      icon: Icon(Icons.arrow_drop_down),
-                      onPressed: () {
-                        null;
-                      }),
-                ])
+            Container(padding: EdgeInsets.all(16),child:Column(
+              children: <Widget>[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    Text('Minimum percent'),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          IconButton(
+                            icon: Icon(Icons.arrow_drop_up),
+                            onPressed: () {
+                              settingsModel.addStar();
+                            },
+                          ),
+                          Text(
+                            settingsModel.min.toStringAsFixed(1),
+                            textAlign: TextAlign.center,
+                          ),
+                          IconButton(
+                              icon: Icon(Icons.arrow_drop_down),
+                              onPressed: () {
+                                settingsModel.subtractStar();
+                              }),
+                        ])
+                  ],
+                ),Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    Text('Maximum percent'),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          IconButton(
+                            icon: Icon(Icons.arrow_drop_up),
+                            onPressed: () {
+                              settingsModel.addStar();
+                            },
+                          ),
+                          Text(
+                            settingsModel.max.toStringAsFixed(1),
+                            textAlign: TextAlign.center,
+                          ),
+                          IconButton(
+                              icon: Icon(Icons.arrow_drop_down),
+                              onPressed: () {
+                                settingsModel.subtractStar();
+                              }),
+                        ])
+                  ],
+                ),Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    Text('Number of stars'),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          IconButton(
+                            icon: Icon(Icons.arrow_drop_up),
+                            onPressed: () {
+                              settingsModel.addStar();
+                            },
+                          ),
+                          Text(
+                            settingsModel.numOfStars.toString(),
+                            textAlign: TextAlign.center,
+                          ),
+                          IconButton(
+                              icon: Icon(Icons.arrow_drop_down),
+                              onPressed: () {
+                                settingsModel.subtractStar();
+                              }),
+                        ])
+                  ],
+                ),
+              ],
+            )),
+
           ],
         );
       },
     );
-  }
-
-  Widget build(BuildContext context) {
-    return _askUser(context);
   }
 }
