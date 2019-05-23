@@ -1,10 +1,7 @@
-import 'dart:math';
-import 'dart:async';
 import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:scoped_model/scoped_model.dart';
-import 'package:tipping/Modal.dart';
-import 'package:tipping/settingsPage.dart';
 import 'package:tipping/SettingsModel.dart';
 import 'package:tipping/params.dart';
 
@@ -19,13 +16,11 @@ class CalculatorPage extends StatefulWidget {
 class _CalculatorPageState extends State<CalculatorPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   double input = 0.0;
-  Modal modal = new Modal();
-  MyDialog myDialog = new MyDialog();
 
   @override
   Widget build(BuildContext context) {
     return ScopedModelDescendant<SettingsModel>(
-        builder: (context, child, modelSettings) {
+        builder: (context, child, settingsModel) {
       return Scaffold(
         backgroundColor: Colors.grey[200],
         body: Column(children: <Widget>[
@@ -80,25 +75,19 @@ class _CalculatorPageState extends State<CalculatorPage> {
           ),
           Flexible(
             flex: 2,
-            child: Recipt(settingsModel: modelSettings, input: input),
+            child: ScopedModel<SettingsModel>(
+                model: settingsModel, child: Recipt(settingsModel: settingsModel, input: input)),
           ),
         ]),
 
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            myDialog._askUser(context, modelSettings);
-
-            /*ScopedModelDescendant<SettingsModel>(
-    builder: (context, child, settings)
-    {
-      showMyDialog("a", context,settings);
-    });*/
-            //modal.mainBottomSheet(context);
-            /*Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) =>
-                      SettingsPage(title: 'Settings', params: widget.params)));*/
+            showDialog(
+                context: context,
+                builder: (_) {
+                  return ScopedModel<SettingsModel>(
+                      model: settingsModel, child: MyDialog());
+                });
           },
           tooltip: 'Settings',
           child: Icon(Icons.settings),
@@ -125,15 +114,14 @@ class Recipt extends StatefulWidget {
 }
 
 class _ReciptState extends State<Recipt> {
-  double rating = 3.5;
+  double rating = 3.0;
   double percent = 0.5;
   int tip = 0;
 
   Widget build(BuildContext context) {
-
-        percent = lerpDouble(widget.settingsModel.min, widget.settingsModel.max,
-            rating / widget.settingsModel.numOfStars);
-        tip = (percent * 0.01 * widget.input).round();
+    percent = lerpDouble(widget.settingsModel.min, widget.settingsModel.max,
+        rating / widget.settingsModel.numOfStars);
+    tip = (percent * 0.01 * widget.input).round();
 
     /*percent = lerpDouble(widget.params.min, widget.params.max,
         rating / widget.params.numOfStars);
@@ -162,13 +150,13 @@ class _ReciptState extends State<Recipt> {
                     ScopedModelDescendant<SettingsModel>(
                         builder: (context, child, settings) {
                       return Text(settings.min.toStringAsFixed(1),
-                          style: Theme.of(context).textTheme.body1);
+                          style: Theme.of(context).textTheme.body2);
                     }),
-                    Text('Linear', style: Theme.of(context).textTheme.body1),
+                    Text('Linear', style: Theme.of(context).textTheme.body2),
                     ScopedModelDescendant<SettingsModel>(
                         builder: (context, child, settings) {
                       return Text(settings.max.toStringAsFixed(1),
-                          style: Theme.of(context).textTheme.body1);
+                          style: Theme.of(context).textTheme.body2);
                     }),
                   ],
                 ),
@@ -184,7 +172,7 @@ class _ReciptState extends State<Recipt> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    Text('Tip:', style: Theme.of(context).textTheme.title),
+                    Text('Tip: (rounded)', style: Theme.of(context).textTheme.title),
                     Text(tip.toString(),
                         style: Theme.of(context).textTheme.title),
                   ],
@@ -206,19 +194,14 @@ class RatingScale extends StatelessWidget {
   final Color color;
   double rating;
 
-  RatingScale(
-      {
-      this.rating,
-      this.onRatingChanged,
-      this.color
-      });
+  RatingScale({this.rating, this.onRatingChanged, this.color});
 
   Widget buildStar(BuildContext context, int index) {
     Icon icon;
     if (index >= rating) {
       icon = new Icon(
         Icons.star_border,
-        color: Theme.of(context).buttonColor,
+        color: color ?? Theme.of(context).buttonColor,
       );
     } else if (index > rating - 1 && index < rating) {
       icon = new Icon(
@@ -244,10 +227,13 @@ class RatingScale extends StatelessWidget {
       child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
-            ScopedModelDescendant<SettingsModel>(builder:(context,child,model){return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: new List.generate(
-                    model.numOfStars, (index) => buildStar(context, index)));}),
+            ScopedModelDescendant<SettingsModel>(
+                builder: (context, child, model) {
+              return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: new List.generate(
+                      model.numOfStars, (index) => buildStar(context, index)));
+            }),
           ]),
     );
   }
@@ -264,98 +250,115 @@ class DecimalNumberSubmitValidator {
   }
 }
 
-class MyDialog {
-  _askUser(BuildContext context, SettingsModel settingsModel) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return SimpleDialog(
-          title: new Text('Settings'),
-          children: <Widget>[
-            Container(padding: EdgeInsets.all(16),child:Column(
-              children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: <Widget>[
-                    Text('Minimum percent'),
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          IconButton(
-                            icon: Icon(Icons.arrow_drop_up),
-                            onPressed: () {
-                              settingsModel.addStar();
-                            },
-                          ),
-                          Text(
-                            settingsModel.min.toStringAsFixed(1),
-                            textAlign: TextAlign.center,
-                          ),
-                          IconButton(
-                              icon: Icon(Icons.arrow_drop_down),
-                              onPressed: () {
-                                settingsModel.subtractStar();
-                              }),
-                        ])
-                  ],
-                ),Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: <Widget>[
-                    Text('Maximum percent'),
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          IconButton(
-                            icon: Icon(Icons.arrow_drop_up),
-                            onPressed: () {
-                              settingsModel.addStar();
-                            },
-                          ),
-                          Text(
-                            settingsModel.max.toStringAsFixed(1),
-                            textAlign: TextAlign.center,
-                          ),
-                          IconButton(
-                              icon: Icon(Icons.arrow_drop_down),
-                              onPressed: () {
-                                settingsModel.subtractStar();
-                              }),
-                        ])
-                  ],
-                ),Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: <Widget>[
-                    Text('Number of stars'),
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          IconButton(
-                            icon: Icon(Icons.arrow_drop_up),
-                            onPressed: () {
-                              settingsModel.addStar();
-                            },
-                          ),
-                          Text(
-                            settingsModel.numOfStars.toString(),
-                            textAlign: TextAlign.center,
-                          ),
-                          IconButton(
-                              icon: Icon(Icons.arrow_drop_down),
-                              onPressed: () {
-                                settingsModel.subtractStar();
-                              }),
-                        ])
-                  ],
-                ),
-              ],
-            )),
+class MyDialog extends StatefulWidget {
+  @override
+  _MyDialogState createState() => new _MyDialogState();
+}
 
-          ],
-        );
-      },
+class _MyDialogState extends State<MyDialog> {
+  @override
+  Widget build(BuildContext context) {
+    return SimpleDialog(
+      titlePadding: EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16.0))),
+      elevation: 5,
+      title: new Text('Settings'),
+      children: <Widget>[
+        ScopedModelDescendant<SettingsModel>(
+          builder: (context, child, settings) {
+            return Container(
+              width: 100,
+                height:300,
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        Text('Minimum percent'),
+                        Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              IconButton(
+                                icon: Icon(Icons.arrow_drop_up),
+                                onPressed: () {
+                                  settings.addStar();
+                                },
+                              ),
+                              Text(
+                                settings.min.toStringAsFixed(1),
+                                textAlign: TextAlign.center,
+                              ),
+                              IconButton(
+                                  icon: Icon(Icons.arrow_drop_down),
+                                  onPressed: () {
+                                    settings.subtractStar();
+                                  }),
+                            ])
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        Text('Maximum percent'),
+                        Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              IconButton(
+                                icon: Icon(Icons.arrow_drop_up),
+                                onPressed: () {
+                                  settings.addStar();
+                                },
+                              ),
+                              Text(
+                                settings.max.toStringAsFixed(1),
+                                textAlign: TextAlign.center,
+                              ),
+                              IconButton(
+                                  icon: Icon(Icons.arrow_drop_down),
+                                  onPressed: () {
+                                    settings.subtractStar();
+                                  }),
+                            ])
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        Text('Number of stars'),
+                        Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              IconButton(
+                                icon: Icon(Icons.arrow_drop_up),
+                                onPressed: () {
+                                  settings.addStar();
+                                },
+                              ),
+                              Text(
+                                settings.numOfStars.toString(),
+                                textAlign: TextAlign.center,
+                              ),
+                              IconButton(
+                                  icon: Icon(Icons.arrow_drop_down),
+                                  onPressed: () {
+                                    settings.subtractStar();
+                                  }),
+                            ])
+                      ],
+                    ),
+                RatingScale(rating:settings.numOfStars.toDouble(),color:Colors.grey[350]),
+                  ],
+                ));
+          },
+        ),
+      ],
     );
   }
 }

@@ -24,6 +24,7 @@ class MyApp extends StatelessWidget {
           title: TextStyle(
               color: Colors.green, fontSize: 24.0, fontWeight: FontWeight.w300),
           body1: TextStyle(fontSize: 14.0, fontFamily: 'Hind'),
+          body2: TextStyle(fontSize: 14.0, fontFamily: 'Hind',color: Colors.grey[400]),
         ),
       ),
       home: MyHomePage(),
