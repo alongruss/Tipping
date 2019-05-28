@@ -22,10 +22,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
     return ScopedModelDescendant<SettingsModel>(
         builder: (context, child, settingsModel) {
       return Scaffold(
+        resizeToAvoidBottomPadding: false,
         backgroundColor: Colors.grey[200],
         body: Column(children: <Widget>[
           Flexible(
-            flex: 2,
+            flex: 1,
             child: Container(
               alignment: AlignmentDirectional.bottomCenter,
               padding: EdgeInsets.all(32.0),
@@ -54,9 +55,15 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   },
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (String value) {
-                    setState(() {
-                      input = double.parse(value);
-                    });
+                    if (DecimalNumberSubmitValidator().isValid(value)) {
+                      setState(() {
+                        input = double.parse(value);
+                      });
+                    } else {
+                      setState(() {
+                        input = 0.0;
+                      });
+                    }
                   },
                   onSaved: (String value) {
                     setState(() {
@@ -76,7 +83,8 @@ class _CalculatorPageState extends State<CalculatorPage> {
           Flexible(
             flex: 2,
             child: ScopedModel<SettingsModel>(
-                model: settingsModel, child: Recipt(settingsModel: settingsModel, input: input)),
+                model: settingsModel,
+                child: Recipt(settingsModel: settingsModel, input: input)),
           ),
         ]),
 
@@ -120,7 +128,7 @@ class _ReciptState extends State<Recipt> {
 
   Widget build(BuildContext context) {
     percent = lerpDouble(widget.settingsModel.min, widget.settingsModel.max,
-        rating / widget.settingsModel.numOfStars);
+        rating / (widget.settingsModel.numOfStars - 1.0));
     tip = (percent * 0.01 * widget.input).round();
 
     /*percent = lerpDouble(widget.params.min, widget.params.max,
@@ -128,11 +136,10 @@ class _ReciptState extends State<Recipt> {
     tip = (percent * 0.01 * widget.input).round();*/
 
     return Card(
+      margin: EdgeInsets.fromLTRB(48, 0, 48, 32),
       color: Colors.white,
       child: Container(
-          width: 300,
-          height: 400,
-          padding: EdgeInsets.all(16.0),
+          padding: EdgeInsets.fromLTRB(32, 8, 32, 16),
           child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
@@ -172,15 +179,25 @@ class _ReciptState extends State<Recipt> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    Text('Tip: (rounded)', style: Theme.of(context).textTheme.title),
+                    Text('Tip: (rounded)',
+                        style: Theme.of(context).textTheme.title),
                     Text(tip.toString(),
                         style: Theme.of(context).textTheme.title),
                   ],
                 ),
                 Divider(color: Colors.green),
-                Text(
-                  'Sum: ' + (widget.input + tip).toStringAsFixed(2),
-                  style: Theme.of(context).textTheme.headline,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Text(
+                      'Sum: ',
+                      style: Theme.of(context).textTheme.headline,
+                    ),
+                    Text(
+                      (widget.input + tip).toStringAsFixed(0),
+                      style: Theme.of(context).textTheme.headline,
+                    ),
+                  ],
                 ),
               ])),
     );
@@ -198,12 +215,12 @@ class RatingScale extends StatelessWidget {
 
   Widget buildStar(BuildContext context, int index) {
     Icon icon;
-    if (index >= rating) {
+    if (index - 1 >= rating) {
       icon = new Icon(
         Icons.star_border,
         color: color ?? Theme.of(context).buttonColor,
       );
-    } else if (index > rating - 1 && index < rating) {
+    } else if (index - 1 > rating - 1 && index - 1 < rating) {
       icon = new Icon(
         Icons.star_half,
         color: color ?? Theme.of(context).buttonColor,
@@ -217,7 +234,7 @@ class RatingScale extends StatelessWidget {
     return new InkResponse(
       onTap: onRatingChanged == null
           ? null
-          : () => onRatingChanged((index + 0.5).roundToDouble()),
+          : () => onRatingChanged((index).roundToDouble()),
       child: icon,
     );
   }
@@ -243,7 +260,7 @@ class DecimalNumberSubmitValidator {
   bool isValid(String value) {
     try {
       final number = double.parse(value);
-      return number > 0.0;
+      return (number > 0.0 && number < 1000000);
     } catch (e) {
       return false;
     }
@@ -256,6 +273,11 @@ class MyDialog extends StatefulWidget {
 }
 
 class _MyDialogState extends State<MyDialog> {
+  Color _getArrowIconColor(condition) {
+    if (condition) return Colors.grey[300];
+    return Colors.black;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SimpleDialog(
@@ -268,14 +290,12 @@ class _MyDialogState extends State<MyDialog> {
         ScopedModelDescendant<SettingsModel>(
           builder: (context, child, settings) {
             return Container(
-              width: 100,
-                height:300,
                 padding: EdgeInsets.all(16),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Row(
+                    Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: <Widget>[
                         Text('Minimum percent'),
@@ -285,23 +305,27 @@ class _MyDialogState extends State<MyDialog> {
                             children: <Widget>[
                               IconButton(
                                 icon: Icon(Icons.arrow_drop_up),
+                                color: _getArrowIconColor(settings.checkTopLimitReached(settings.min,settings.globalMax)),
                                 onPressed: () {
-                                  settings.addStar();
+                                  settings.addMin();
                                 },
                               ),
                               Text(
-                                settings.min.toStringAsFixed(1),
+                                settings.min.toStringAsFixed(1) + '%',
                                 textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.headline,
                               ),
                               IconButton(
                                   icon: Icon(Icons.arrow_drop_down),
+                                  color: _getArrowIconColor(settings.checkBottomLimitReached(settings.min,settings.globalMin)),
                                   onPressed: () {
-                                    settings.subtractStar();
+                                    settings.subtractMin();
                                   }),
                             ])
                       ],
                     ),
-                    Row(
+                    SizedBox(height: 32),
+                    Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: <Widget>[
                         Text('Maximum percent'),
@@ -311,23 +335,27 @@ class _MyDialogState extends State<MyDialog> {
                             children: <Widget>[
                               IconButton(
                                 icon: Icon(Icons.arrow_drop_up),
+                                color: _getArrowIconColor(settings.checkTopLimitReached(settings.max,settings.globalMax)),
                                 onPressed: () {
-                                  settings.addStar();
+                                  settings.addMax();
                                 },
                               ),
                               Text(
-                                settings.max.toStringAsFixed(1),
+                                settings.max.toStringAsFixed(1) + '%',
                                 textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.headline,
                               ),
                               IconButton(
                                   icon: Icon(Icons.arrow_drop_down),
+                                  color: _getArrowIconColor(settings.checkBottomLimitReached(settings.max,settings.globalMin)),
                                   onPressed: () {
-                                    settings.subtractStar();
+                                    settings.subtractMax();
                                   }),
                             ])
                       ],
                     ),
-                    Row(
+                    SizedBox(height: 32),
+                    Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: <Widget>[
                         Text('Number of stars'),
@@ -337,6 +365,7 @@ class _MyDialogState extends State<MyDialog> {
                             children: <Widget>[
                               IconButton(
                                 icon: Icon(Icons.arrow_drop_up),
+                                color: _getArrowIconColor(settings.checkTopLimitReached(settings.numOfStars,7)),
                                 onPressed: () {
                                   settings.addStar();
                                 },
@@ -344,16 +373,24 @@ class _MyDialogState extends State<MyDialog> {
                               Text(
                                 settings.numOfStars.toString(),
                                 textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.headline,
                               ),
                               IconButton(
                                   icon: Icon(Icons.arrow_drop_down),
+                                  color: _getArrowIconColor(settings.checkBottomLimitReached(settings.numOfStars,3)),
                                   onPressed: () {
                                     settings.subtractStar();
                                   }),
                             ])
                       ],
                     ),
-                RatingScale(rating:settings.numOfStars.toDouble(),color:Colors.grey[350]),
+                    SizedBox(height: 32),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: RatingScale(
+                          rating: settings.numOfStars.toDouble(),
+                          color: Colors.grey[350]),
+                    )
                   ],
                 ));
           },

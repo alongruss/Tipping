@@ -18,12 +18,14 @@ class MyApp extends StatelessWidget {
         buttonColor: Colors.green,
         textTheme: TextTheme(
           display1: TextStyle(
-              color: Colors.white, fontSize: 36.0, fontWeight: FontWeight.w500),
+              color: Colors.white, fontSize: 32.0, fontWeight: FontWeight.w500),
           headline: TextStyle(
-              color: Colors.green, fontSize: 36.0, fontWeight: FontWeight.w500),
+              color: Colors.green, fontSize: 32.0, fontWeight: FontWeight.w500),
+          subhead: TextStyle(
+              color: Colors.black, fontSize: 28.0, fontWeight: FontWeight.w500),
           title: TextStyle(
-              color: Colors.green, fontSize: 24.0, fontWeight: FontWeight.w300),
-          body1: TextStyle(fontSize: 14.0, fontFamily: 'Hind'),
+              color: Colors.green, fontSize: 20.0, fontWeight: FontWeight.w300),
+          body1: TextStyle(fontSize: 16.0, fontFamily: 'Hind'),
           body2: TextStyle(fontSize: 14.0, fontFamily: 'Hind',color: Colors.grey[400]),
         ),
       ),
@@ -55,8 +57,6 @@ class _MyHomePageState extends State<MyHomePage> {
       children: [
         ScopedModel<SettingsModel>(
             model: settings, child: CalculatorPage(params: params)),
-        ScopedModel<SettingsModel>(
-            model: settings, child: SettingsPage(title: 'Settings', params: params)),
       ],
     ));
   }
